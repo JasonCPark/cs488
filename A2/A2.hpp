@@ -51,6 +51,8 @@ protected:
 	void mapVboDataToVertexAttributeLocation();
 	void uploadVertexDataToVbos();
 
+	void initCube();
+
 	void initLineData();
 
 	void setLineColour(const glm::vec3 & colour);
@@ -70,4 +72,9 @@ protected:
 
 	glm::vec3 m_currentLineColour;
 
+
+	glm::vec4 model_verts[8];
+
+	glm::vec2 2d_verts[8];
+	
 };
