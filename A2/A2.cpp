@@ -34,7 +34,6 @@ A2::A2()
 // Destructor
 A2::~A2()
 {
-
 }
 
 //----------------------------------------------------------------------------------------
@@ -56,22 +55,81 @@ void A2::init()
 
 	mapVboDataToVertexAttributeLocation();
 
+	setInitVals();
+
 	initCube();
+}
+
+//----------------------------------------------------------------------------------------
+void A2::setInitVals()
+{
+	modelMat = mat4(1.0f);
 }
 
 //----------------------------------------------------------------------------------------
 void A2::initCube()
 {
-	model_verts = {
-		vec4(0.5f, 0.5f, 0.5f, 1),
-		vec4(-0.5f, 0.5f, 0.5f, 1),
-		vec4(-0.5f, 0.5f, -0.5f, 1),
-		vec4(0.5f, 0.5f, -0.5f, 1),
-		vec4(0.5f, -0.5f, 0.5f, 1),
-		vec4(-0.5f, -0.5f, 0.5f, 1),
-		vec4(-0.5f, -0.5f, -0.5f, 1),
-		vec4(0.5f, -0.5f, -0.5f, 1),
-	};
+	model_verts[0] = vec4(0.5f, 0.5f, 0.5f, 1);
+	model_verts[1] = vec4(-0.5f, 0.5f, 0.5f, 1);
+	model_verts[2] = vec4(-0.5f, 0.5f, -0.5f, 1);
+	model_verts[3] = vec4(0.5f, 0.5f, -0.5f, 1);
+	model_verts[4] = vec4(0.5f, -0.5f, 0.5f, 1);
+	model_verts[5] = vec4(-0.5f, -0.5f, 0.5f, 1);
+	model_verts[6] = vec4(-0.5f, -0.5f, -0.5f, 1);
+	model_verts[7] = vec4(0.5f, -0.5f, -0.5f, 1);
+
+	
+}
+
+
+//----------------------------------------------------------------------------------------
+void A2::orthoProject()
+{
+	for (int i=0; i<8; i++)
+	{
+		verts_2D[i] = vec2(transformed_verts[i].x, transformed_verts[i].y);
+	}
+}
+
+//----------------------------------------------------------------------------------------
+void A2::rotateX(float angle)
+{
+	xRotationMat = mat4(
+		1, 0, 0, 0,
+		0, cos(angle), sin(angle), 0,
+		0, -sin(angle), cos(angle), 0,
+		0, 0, 0, 1
+	);
+}
+
+//----------------------------------------------------------------------------------------
+void A2::rotateY(float angle)
+{
+	yRotationMat = mat4(
+		cos(angle), 0, -sin(angle), 0, 
+		0, 1, 0, 0,
+		sin(angle), 0, cos(angle), 0,
+		0, 0, 0, 1
+	);
+}
+
+
+//----------------------------------------------------------------------------------------
+void A2::transform()
+{
+	for (int i=0; i<8; i++)
+	{
+		transformed_verts[i] = modelMat * model_verts[i];
+	}
+}
+
+//----------------------------------------------------------------------------------------
+void A2::draw2D()
+{
+	for (int i=0; i<12; i++)
+	{
+		drawLine(verts_2D[edges[i][0]], verts_2D[edges[i][1]]);
+	}
 }
 
 //----------------------------------------------------------------------------------------
@@ -205,7 +263,11 @@ void A2::appLogic()
 
 	// Call at the beginning of frame, before drawing lines:
 	initLineData();
+	transform();
+	orthoProject();
+	draw2D();
 
+/*
 	// Draw outer square:
 	setLineColour(vec3(1.0f, 0.7f, 0.8f));
 	drawLine(vec2(-0.5f, -0.5f), vec2(0.5f, -0.5f));
@@ -220,6 +282,7 @@ void A2::appLogic()
 	drawLine(vec2(0.25f, -0.25f), vec2(0.25f, 0.25f));
 	drawLine(vec2(0.25f, 0.25f), vec2(-0.25f, 0.25f));
 	drawLine(vec2(-0.25f, 0.25f), vec2(-0.25f, -0.25f));
+*/
 }
 
 //----------------------------------------------------------------------------------------
@@ -248,6 +311,10 @@ void A2::guiLogic()
 		// Create Button, and check if it was clicked:
 		if( ImGui::Button( "Quit Application" ) ) {
 			glfwSetWindowShouldClose(m_window, GL_TRUE);
+		}
+		if( ImGui::Button( "Reset" ) ) {
+			// Reset to initial values
+			setInitVals();
 		}
 
 		ImGui::Text( "Framerate: %.1f FPS", ImGui::GetIO().Framerate );
@@ -305,7 +372,6 @@ void A2::draw()
  */
 void A2::cleanup()
 {
-
 }
 
 //----------------------------------------------------------------------------------------
@@ -331,8 +397,30 @@ bool A2::mouseMoveEvent (
 		double yPos
 ) {
 	bool eventHandled(false);
+	current_xpos = xPos;
 
-	// Fill in with event handling code...
+	if (!ImGui::IsMouseHoveringAnyWindow()) {
+		if (mouseLActive || mouseMActive || mouseRActive)
+		{
+			if (mouseLActive) {
+				float xdiff = xPos - prev_xpos_L;
+				rotateX(xdiff/100);
+			}
+			else
+			{
+				xRotationMat = mat4(1.0f);
+			}
+			if (mouseMActive) {
+				float xdiff = xPos - prev_xpos_M;
+				rotateY(xdiff/100);
+			}
+			else
+			{
+				yRotationMat = mat4(1.0f);
+			}
+			modelMat = prev_model * xRotationMat * yRotationMat;
+		}
+	}
 
 	return eventHandled;
 }
@@ -348,7 +436,35 @@ bool A2::mouseButtonInputEvent (
 ) {
 	bool eventHandled(false);
 
-	// Fill in with event handling code...
+	if (!ImGui::IsMouseHoveringAnyWindow()) {
+		if (actions == GLFW_PRESS) {
+			prev_model = modelMat;
+			if (button == GLFW_MOUSE_BUTTON_LEFT) {
+				prev_xpos_L = current_xpos;
+				mouseLActive = true;
+			}
+			if (button == GLFW_MOUSE_BUTTON_MIDDLE) {
+				prev_xpos_M = current_xpos;
+				mouseMActive = true;
+			}
+			if (button == GLFW_MOUSE_BUTTON_RIGHT) {
+				prev_xpos_R = current_xpos;
+				mouseRActive = true;
+			}
+		}
+	} 
+
+    if (actions == GLFW_RELEASE) {
+		if (button == GLFW_MOUSE_BUTTON_LEFT) {
+			mouseLActive = false;
+		}
+		if (button == GLFW_MOUSE_BUTTON_MIDDLE) {
+			mouseMActive = false;
+		}
+		if (button == GLFW_MOUSE_BUTTON_RIGHT) {
+			mouseRActive = false;
+		}
+    }
 
 	return eventHandled;
 }
@@ -394,7 +510,19 @@ bool A2::keyInputEvent (
 ) {
 	bool eventHandled(false);
 
-	// Fill in with event handling code...
+	if( action == GLFW_PRESS ) {
+
+		if (key == GLFW_KEY_Q) {
+			cout << "Q key pressed" << endl;
+			glfwSetWindowShouldClose(m_window, GL_TRUE);
+			eventHandled = true;
+		}
+		if (key == GLFW_KEY_R) {
+			cout << "R key pressed" << endl;
+			setInitVals();
+			eventHandled = true;
+		}
+	}
 
 	return eventHandled;
 }

@@ -62,6 +62,18 @@ protected:
 			const glm::vec2 & v1
 	);
 
+
+	void setInitVals();
+
+	void orthoProject();
+
+	void draw2D();
+
+	void rotateX(float angle);
+	void rotateY(float angle);
+	
+	void transform();
+
 	ShaderProgram m_shader;
 
 	GLuint m_vao;            // Vertex Array Object
@@ -72,9 +84,41 @@ protected:
 
 	glm::vec3 m_currentLineColour;
 
+	
+	int edges[12][2] = {
+		{0,1},
+		{1,2},
+		{2,3},
+		{3,0},
+
+		{4,5},
+		{5,6},
+		{6,7},
+		{7,4},
+
+		{0,4},
+		{1,5},
+		{2,6},
+		{3,7}
+	};
 
 	glm::vec4 model_verts[8];
+	glm::vec4 transformed_verts[8];
+	glm::vec2 verts_2D[8];
 
-	glm::vec2 2d_verts[8];
+	glm::mat4 modelMat;
+	glm::mat4 prev_model;
+
+	glm::mat4 xRotationMat;
+	glm::mat4 yRotationMat;
+
+	// Fields related to rotation by mouse drag
+	float current_xpos;
+	float prev_xpos_L;
+	float prev_xpos_M;
+	float prev_xpos_R;
+    bool mouseLActive;
+    bool mouseMActive;
+    bool mouseRActive;
 	
 };
