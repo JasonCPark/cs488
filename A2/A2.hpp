@@ -51,7 +51,6 @@ protected:
 	void mapVboDataToVertexAttributeLocation();
 	void uploadVertexDataToVbos();
 
-	void initCube();
 
 	void initLineData();
 
@@ -63,16 +62,24 @@ protected:
 	);
 
 
+	enum class Mode {RotView, TranslView, Persp, RotMod, TranslMod, ScaMod, ViewP};
+	Mode currentMode = Mode::RotMod;
+	enum class Axis {x, y, z};
+
 	void setInitVals();
+	void initModel();
+	void initCube();
 
-	void orthoProject();
-
-	void draw2D();
-
-	void rotateX(float angle);
-	void rotateY(float angle);
-	
 	void transform();
+	void orthoProject();
+	void draw2D();
+	void drawGnomon(glm::vec2 *gnomon);
+
+	glm::mat4 makeTransMat(Axis axis, float amount);
+	glm::mat4 rotateX(float angle);
+	glm::mat4 rotateY(float angle);
+	glm::mat4 rotateZ(float angle);
+	
 
 	ShaderProgram m_shader;
 
@@ -83,6 +90,7 @@ protected:
 	VertexData m_vertexData;
 
 	glm::vec3 m_currentLineColour;
+
 
 	
 	int edges[12][2] = {
@@ -102,15 +110,27 @@ protected:
 		{3,7}
 	};
 
+	int gnomon_edges[3][2] = {
+		{0,1},
+		{0,2},
+		{0,3}
+	};
+
 	glm::vec4 model_verts[8];
+	glm::vec4 model_gnomon[4];
+
 	glm::vec4 transformed_verts[8];
 	glm::vec2 verts_2D[8];
+
+	glm::vec4 transformed_model_gnomon[4];
+	glm::vec2 model_gnomon_2D[4];
 
 	glm::mat4 modelMat;
 	glm::mat4 prev_model;
 
 	glm::mat4 xRotationMat;
 	glm::mat4 yRotationMat;
+	glm::mat4 zRotationMat;
 
 	// Fields related to rotation by mouse drag
 	float current_xpos;

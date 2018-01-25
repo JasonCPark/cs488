@@ -57,13 +57,24 @@ void A2::init()
 
 	setInitVals();
 
+	initModel();
+
 	initCube();
 }
 
 //----------------------------------------------------------------------------------------
 void A2::setInitVals()
 {
-	modelMat = mat4(1.0f);
+	modelMat = mat4(1.0f); // Identity Matrix
+}
+
+//----------------------------------------------------------------------------------------
+void A2::initModel()
+{
+	model_gnomon[0] = vec4(0, 0, 0, 1);
+	model_gnomon[1] = vec4(0.25f, 0, 0, 1);
+	model_gnomon[2] = vec4(0, 0.25f, 0, 1);
+	model_gnomon[3] = vec4(0, 0, 0.25f, 1);
 }
 
 //----------------------------------------------------------------------------------------
@@ -77,8 +88,6 @@ void A2::initCube()
 	model_verts[5] = vec4(-0.5f, -0.5f, 0.5f, 1);
 	model_verts[6] = vec4(-0.5f, -0.5f, -0.5f, 1);
 	model_verts[7] = vec4(0.5f, -0.5f, -0.5f, 1);
-
-	
 }
 
 
@@ -89,12 +98,36 @@ void A2::orthoProject()
 	{
 		verts_2D[i] = vec2(transformed_verts[i].x, transformed_verts[i].y);
 	}
+	for (int i=0; i<4; i++)
+	{
+		model_gnomon_2D[i] = vec2(transformed_model_gnomon[i].x, transformed_model_gnomon[i].y);
+	}
 }
 
 //----------------------------------------------------------------------------------------
-void A2::rotateX(float angle)
+mat4 A2::makeTransMat(Axis axis, float amount)
 {
-	xRotationMat = mat4(
+	if (currentMode == Mode::RotMod)
+	{
+		if (axis == Axis::x)
+		{
+			return rotateX(amount);
+		}
+		if (axis == Axis::y)
+		{
+			return rotateY(amount);
+		}
+		if (axis == Axis::z)
+		{
+			return rotateZ(amount);
+		}
+	}
+}
+
+//----------------------------------------------------------------------------------------
+mat4 A2::rotateX(float angle)
+{
+	return mat4(
 		1, 0, 0, 0,
 		0, cos(angle), sin(angle), 0,
 		0, -sin(angle), cos(angle), 0,
@@ -103,9 +136,9 @@ void A2::rotateX(float angle)
 }
 
 //----------------------------------------------------------------------------------------
-void A2::rotateY(float angle)
+mat4 A2::rotateY(float angle)
 {
-	yRotationMat = mat4(
+	return mat4(
 		cos(angle), 0, -sin(angle), 0, 
 		0, 1, 0, 0,
 		sin(angle), 0, cos(angle), 0,
@@ -113,6 +146,16 @@ void A2::rotateY(float angle)
 	);
 }
 
+//----------------------------------------------------------------------------------------
+mat4 A2::rotateZ(float angle)
+{
+	return mat4(
+		cos(angle), sin(angle), 0, 0, 
+		-sin(angle), cos(angle), 0, 0,
+		0, 0, 1, 0,
+		0, 0, 0, 1
+	);
+}
 
 //----------------------------------------------------------------------------------------
 void A2::transform()
@@ -121,15 +164,32 @@ void A2::transform()
 	{
 		transformed_verts[i] = modelMat * model_verts[i];
 	}
+	for (int i=0; i<4; i++)
+	{
+		transformed_model_gnomon[i] = modelMat * model_gnomon[i];
+	}
 }
 
 //----------------------------------------------------------------------------------------
 void A2::draw2D()
 {
+	setLineColour(vec3(1, 1, 1));
 	for (int i=0; i<12; i++)
 	{
 		drawLine(verts_2D[edges[i][0]], verts_2D[edges[i][1]]);
 	}
+	drawGnomon(model_gnomon_2D);
+}
+
+//----------------------------------------------------------------------------------------
+void A2::drawGnomon(vec2 *gnomon)
+{
+	setLineColour(vec3(1, 0, 0));
+	drawLine(gnomon[gnomon_edges[0][0]], gnomon[gnomon_edges[0][1]]);
+	setLineColour(vec3(0, 1, 0));
+	drawLine(gnomon[gnomon_edges[1][0]], gnomon[gnomon_edges[1][1]]);
+	setLineColour(vec3(0, 0, 1));
+	drawLine(gnomon[gnomon_edges[2][0]], gnomon[gnomon_edges[2][1]]);
 }
 
 //----------------------------------------------------------------------------------------
@@ -242,7 +302,6 @@ void A2::drawLine(
 		const glm::vec2 & v0,   // Line Start (NDC coordinate)
 		const glm::vec2 & v1    // Line End (NDC coordinate)
 ) {
-
 	m_vertexData.positions[m_vertexData.index] = v0;
 	m_vertexData.colours[m_vertexData.index] = m_currentLineColour;
 	++m_vertexData.index;
@@ -402,23 +461,22 @@ bool A2::mouseMoveEvent (
 	if (!ImGui::IsMouseHoveringAnyWindow()) {
 		if (mouseLActive || mouseMActive || mouseRActive)
 		{
+			mat4 xTransform = mat4(1.0f);
+			mat4 yTransform = mat4(1.0f);
+			mat4 zTransform = mat4(1.0f);
 			if (mouseLActive) {
-				float xdiff = xPos - prev_xpos_L;
-				rotateX(xdiff/100);
-			}
-			else
-			{
-				xRotationMat = mat4(1.0f);
+				float diff = xPos - prev_xpos_L;
+				xTransform = makeTransMat(Axis::x, diff/100);
 			}
 			if (mouseMActive) {
-				float xdiff = xPos - prev_xpos_M;
-				rotateY(xdiff/100);
+				float diff = xPos - prev_xpos_M;
+				yTransform = makeTransMat(Axis::y, diff/100);
 			}
-			else
-			{
-				yRotationMat = mat4(1.0f);
+			if (mouseRActive) {
+				float diff = xPos - prev_xpos_R;
+				zTransform = makeTransMat(Axis::z, diff/100);
 			}
-			modelMat = prev_model * xRotationMat * yRotationMat;
+			modelMat = prev_model * xTransform * yTransform * zTransform;
 		}
 	}
 
