@@ -64,22 +64,30 @@ protected:
 
 	enum class Mode {RotView, TranslView, Persp, RotMod, TranslMod, ScaMod, ViewP};
 	Mode currentMode = Mode::RotMod;
+	int currentModeInt = 3;
 	enum class Axis {x, y, z};
+	void updateCurrentMode();
 
 	void setInitVals();
 	void initModel();
+	void initWorld();
 	void initCube();
 
 	void transform();
 	void orthoProject();
+	void perspProject();
 	void draw2D();
 	void drawGnomon(glm::vec2 *gnomon);
+	void drawViewPort();
 
-	glm::mat4 makeTransMat(Axis axis, float amount);
+	void applyTransMat(float x, float y, float z);
 	glm::mat4 rotateX(float angle);
 	glm::mat4 rotateY(float angle);
 	glm::mat4 rotateZ(float angle);
-	
+	glm::mat4 translate(float xDist, float yDist, float zDist, glm::mat4 rotMat);
+	glm::mat4 scale(float x, float y, float z);
+	glm::mat4 localizeTranslate(glm::mat4 translM, glm::mat4 rotateM);
+	glm::vec2 viewPortTrans(glm::vec2 vert);
 
 	ShaderProgram m_shader;
 
@@ -119,26 +127,58 @@ protected:
 	glm::vec4 model_verts[8];
 	glm::vec4 model_gnomon[4];
 
+	glm::vec4 world_gnomon[4];
+
 	glm::vec4 transformed_verts[8];
 	glm::vec2 verts_2D[8];
 
 	glm::vec4 transformed_model_gnomon[4];
 	glm::vec2 model_gnomon_2D[4];
 
-	glm::mat4 modelMat;
-	glm::mat4 prev_model;
+	glm::vec4 transformed_world_gnomon[4];
+	glm::vec2 world_gnomon_2D[4];
 
-	glm::mat4 xRotationMat;
-	glm::mat4 yRotationMat;
-	glm::mat4 zRotationMat;
+	glm::mat4 rotatePrev;
+	glm::mat4 scalePrev;
+	glm::mat4 translPrev;
+
+	glm::mat4 rotateMat;
+	glm::mat4 scaleMat;
+	glm::mat4 translMat;
+
+	glm::mat4 rotateVPrev;
+	glm::mat4 translVPrev;
+
+	glm::mat4 rotateView;
+	glm::mat4 translView;
+
+	glm::mat4 invTranslView;
+	glm::mat4 invTranslVPrev;
+
+	float n = 1;
+	float nPrev = n;
+	float f = 5;
+	float fPrev = f;
+	float l = -0.9;
+	float r = 0.9;
+	float t = 0.9;
+	float b = -0.9;
+	float th = 0.52f;
+	float thPrev = th;
+
 
 	// Fields related to rotation by mouse drag
 	float current_xpos;
+	float current_ypos;
 	float prev_xpos_L;
+	float prev_ypos_L;
 	float prev_xpos_M;
 	float prev_xpos_R;
+	bool mouseActive;
     bool mouseLActive;
     bool mouseMActive;
     bool mouseRActive;
 	
+	float winWidth = 768;
+	float winHeight = 768;
 };

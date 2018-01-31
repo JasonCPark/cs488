@@ -58,6 +58,8 @@ void A2::init()
 	setInitVals();
 
 	initModel();
+	
+	initWorld();
 
 	initCube();
 }
@@ -65,7 +67,22 @@ void A2::init()
 //----------------------------------------------------------------------------------------
 void A2::setInitVals()
 {
-	modelMat = mat4(1.0f); // Identity Matrix
+	rotateMat = mat4(1.0f); // Identity Matrix
+	scaleMat = mat4(1.0f);
+	translMat = mat4(1.0f);
+	rotateView = mat4(1.0f);
+	translView = mat4(
+		1, 0, 0, 0,
+		0, 1, 0, 0,
+		0, 0, 1, 0,
+		0, 0, -4, 1
+	);
+	invTranslView = mat4(
+		1, 0, 0, 0,
+		0, 1, 0, 0,
+		0, 0, 1, 0,
+		0, 0, 4, 1
+	);
 }
 
 //----------------------------------------------------------------------------------------
@@ -75,6 +92,15 @@ void A2::initModel()
 	model_gnomon[1] = vec4(0.25f, 0, 0, 1);
 	model_gnomon[2] = vec4(0, 0.25f, 0, 1);
 	model_gnomon[3] = vec4(0, 0, 0.25f, 1);
+}
+
+//----------------------------------------------------------------------------------------
+void A2::initWorld()
+{
+	world_gnomon[0] = vec4(0, 0, 0, 1);
+	world_gnomon[1] = vec4(0.25f, 0, 0, 1);
+	world_gnomon[2] = vec4(0, 0.25f, 0, 1);
+	world_gnomon[3] = vec4(0, 0, 0.25f, 1);
 }
 
 //----------------------------------------------------------------------------------------
@@ -102,26 +128,131 @@ void A2::orthoProject()
 	{
 		model_gnomon_2D[i] = vec2(transformed_model_gnomon[i].x, transformed_model_gnomon[i].y);
 	}
+	for (int i=0; i<4; i++)
+	{
+		world_gnomon_2D[i] = vec2(transformed_world_gnomon[i].x, transformed_world_gnomon[i].y);
+	}
 }
 
 //----------------------------------------------------------------------------------------
-mat4 A2::makeTransMat(Axis axis, float amount)
+void A2::perspProject()
+{
+/*
+	mat4 perspMat = mat4(
+		(2*n)/(r-l), 0, 0, 0,
+		0, (2*n)/(t-b), 0, 0,
+		(r+l)/(r-l),(t+b)/(t-b),-(f+n)/(f-n),-1,
+		0, 0, -(2*f*n)/(f-n), 0
+	);
+*/
+	mat4 perspMat = mat4(
+		(1/tan(th/2))/((r-l)/(t-b)), 0, 0, 0,
+		0, 1/tan(th/2), 0, 0,
+		0, 0, -(f+n)/(f-n), -1,
+		0, 0, -(2*f*n)/(f-n), 0
+	);
+	for (int i=0; i<8; i++)
+	{
+		vec4 projVert = perspMat * transformed_verts[i];
+		verts_2D[i] = vec2(projVert.x/projVert.w, projVert.y/projVert.w);
+		//cout << projVert << endl;
+	}
+	for (int i=0; i<4; i++)
+	{
+		vec4 projVert = perspMat * transformed_model_gnomon[i];
+		model_gnomon_2D[i] = vec2(projVert.x/projVert.w, projVert.y/projVert.w);
+	}
+	for (int i=0; i<4; i++)
+	{
+		vec4 projVert = perspMat * transformed_world_gnomon[i];
+		world_gnomon_2D[i] = vec2(projVert.x/projVert.w, projVert.y/projVert.w);
+	}
+}
+
+//----------------------------------------------------------------------------------------
+void A2::applyTransMat(float x, float y, float z)
 {
 	if (currentMode == Mode::RotMod)
 	{
-		if (axis == Axis::x)
-		{
-			return rotateX(amount);
+		mat4 xRotate = rotateX(x);
+		mat4 yRotate = rotateY(y);
+		mat4 zRotate = rotateZ(z);
+		rotateMat = rotatePrev * xRotate * yRotate * zRotate;
+	}
+	if  (currentMode == Mode::TranslMod)
+	{
+		mat4 xTransl = translate(x, 0, 0, rotateMat);
+		mat4 yTransl = translate(0, y, 0, rotateMat);
+		mat4 zTransl = translate(0, 0, z, rotateMat);
+		translMat = translPrev * xTransl * yTransl * zTransl;
+	}
+	if  (currentMode == Mode::ScaMod)
+	{
+		mat4 xScale = scale(1+x, 1, 1);
+		mat4 yScale = scale(1, 1+y, 1);
+		mat4 zScale = scale(1, 1, 1+z);
+		scaleMat = scalePrev * xScale * yScale * zScale;
+	}
+	if (currentMode == Mode::RotView)
+	{
+		mat4 xRotate = rotateX(x);
+		mat4 yRotate = rotateY(y);
+		mat4 zRotate = rotateZ(z);
+		rotateView = rotateVPrev * xRotate * yRotate * zRotate;
+	}
+	if (currentMode == Mode::TranslView)
+	{
+		mat4 xTransl = translate(x, 0, 0, rotateView);
+		mat4 yTransl = translate(0, y, 0, rotateView);
+		mat4 zTransl = translate(0, 0, z, rotateView);
+		translView = translVPrev * xTransl * yTransl * zTransl;
+
+		mat4 invXTransl = translate(-x, 0, 0, rotateView);
+		mat4 invYTransl = translate(0, -y, 0, rotateView);
+		mat4 invZTransl = translate(0, 0, -z, rotateView);
+		invTranslView = invTranslVPrev * invXTransl * invYTransl * invZTransl;
+	}
+	if (currentMode == Mode::Persp)
+	{
+		th = thPrev + x;
+		n = nPrev + y;
+		f = fPrev + z;
+	}
+	if (currentMode == Mode::ViewP)
+	{
+		float norm_prev_xpos = prev_xpos_L/(winWidth/2)-1;
+		float norm_xpos = current_xpos/(winWidth/2)-1;
+		float norm_prev_ypos = -(prev_ypos_L/(winHeight/2)-1);
+		float norm_ypos = -(current_ypos/(winHeight/2)-1);
+		if (norm_prev_xpos < norm_xpos) {
+			l = norm_prev_xpos;
+			r = norm_xpos;
+		} else {
+			l = norm_xpos;
+			r = norm_prev_xpos;
 		}
-		if (axis == Axis::y)
-		{
-			return rotateY(amount);
-		}
-		if (axis == Axis::z)
-		{
-			return rotateZ(amount);
+		if (norm_prev_ypos > norm_ypos) { 
+			t = norm_prev_ypos;
+			b = norm_ypos;
+		} else {
+			t = norm_ypos;
+			b = norm_prev_ypos;
 		}
 	}
+}
+
+//----------------------------------------------------------------------------------------
+void A2::drawViewPort()
+{
+	vec2 tl = vec2(l,t);
+	vec2 tr = vec2(r,t);
+	vec2 bl = vec2(l,b);
+	vec2 br = vec2(r,b);
+	setLineColour(vec3(1, 1, 0));
+	drawLine(tl,tr);
+	drawLine(tr,br);
+	drawLine(br,bl);
+	drawLine(bl,tl);
 }
 
 //----------------------------------------------------------------------------------------
@@ -158,15 +289,70 @@ mat4 A2::rotateZ(float angle)
 }
 
 //----------------------------------------------------------------------------------------
+mat4 A2::translate(float xDist, float yDist, float zDist, mat4 rotMat)
+{
+	vec4 translVec = vec4(xDist, yDist, zDist, 1);
+	translVec = rotMat * translVec;
+	return mat4(
+		vec4(1, 0, 0, 0),
+		vec4(0, 1, 0, 0),
+		vec4(0, 0, 1, 0),
+		translVec
+	);
+}
+
+//----------------------------------------------------------------------------------------
+mat4 A2::scale(float x, float y, float z)
+{
+	return mat4(
+		x, 0, 0, 0,
+		0, y, 0, 0,
+		0, 0, z, 0,
+		0, 0, 0, 1
+	);
+}
+
+//----------------------------------------------------------------------------------------
+mat4 A2::localizeTranslate(mat4 translM, mat4 rotateM)
+{
+	mat4 localTransl = translM;
+	vec4 translVec = translMat[3];
+	translVec = rotateM * translVec;
+	localTransl[3] = translVec;
+	return localTransl;
+}
+
+//----------------------------------------------------------------------------------------
+vec2 A2::viewPortTrans(vec2 vert)
+{
+	float w = r-l;
+	float h = t-b;
+	return vec2(vert.x,vert.y);
+}
+
+//----------------------------------------------------------------------------------------
 void A2::transform()
 {
+	mat4 view = rotateView * translView;
 	for (int i=0; i<8; i++)
 	{
-		transformed_verts[i] = modelMat * model_verts[i];
+		transformed_verts[i] =
+			view *
+			translMat * rotateMat * scaleMat *
+			model_verts[i];
 	}
 	for (int i=0; i<4; i++)
 	{
-		transformed_model_gnomon[i] = modelMat * model_gnomon[i];
+		transformed_model_gnomon[i] = 
+			view *
+			translMat * rotateMat * 
+			model_gnomon[i];
+	}
+	for (int i=0; i<4; i++)
+	{
+		transformed_world_gnomon[i] = 
+			view *
+			world_gnomon[i];
 	}
 }
 
@@ -176,20 +362,25 @@ void A2::draw2D()
 	setLineColour(vec3(1, 1, 1));
 	for (int i=0; i<12; i++)
 	{
-		drawLine(verts_2D[edges[i][0]], verts_2D[edges[i][1]]);
+		drawLine(viewPortTrans(verts_2D[edges[i][0]]), 
+			viewPortTrans(verts_2D[edges[i][1]]));
 	}
 	drawGnomon(model_gnomon_2D);
+	drawGnomon(world_gnomon_2D);
 }
 
 //----------------------------------------------------------------------------------------
 void A2::drawGnomon(vec2 *gnomon)
 {
 	setLineColour(vec3(1, 0, 0));
-	drawLine(gnomon[gnomon_edges[0][0]], gnomon[gnomon_edges[0][1]]);
+	drawLine(viewPortTrans(gnomon[gnomon_edges[0][0]]),
+		viewPortTrans(gnomon[gnomon_edges[0][1]]));
 	setLineColour(vec3(0, 1, 0));
-	drawLine(gnomon[gnomon_edges[1][0]], gnomon[gnomon_edges[1][1]]);
+	drawLine(viewPortTrans(gnomon[gnomon_edges[1][0]]),
+		viewPortTrans(gnomon[gnomon_edges[1][1]]));
 	setLineColour(vec3(0, 0, 1));
-	drawLine(gnomon[gnomon_edges[2][0]], gnomon[gnomon_edges[2][1]]);
+	drawLine(viewPortTrans(gnomon[gnomon_edges[2][0]]),
+		viewPortTrans(gnomon[gnomon_edges[2][1]]));
 }
 
 //----------------------------------------------------------------------------------------
@@ -321,27 +512,12 @@ void A2::appLogic()
 	// Place per frame, application logic here ...
 
 	// Call at the beginning of frame, before drawing lines:
+	updateCurrentMode();
 	initLineData();
 	transform();
-	orthoProject();
+	perspProject();
 	draw2D();
-
-/*
-	// Draw outer square:
-	setLineColour(vec3(1.0f, 0.7f, 0.8f));
-	drawLine(vec2(-0.5f, -0.5f), vec2(0.5f, -0.5f));
-	drawLine(vec2(0.5f, -0.5f), vec2(0.5f, 0.5f));
-	drawLine(vec2(0.5f, 0.5f), vec2(-0.5f, 0.5f));
-	drawLine(vec2(-0.5f, 0.5f), vec2(-0.5f, -0.5f));
-
-
-	// Draw inner square:
-	setLineColour(vec3(0.2f, 1.0f, 1.0f));
-	drawLine(vec2(-0.25f, -0.25f), vec2(0.25f, -0.25f));
-	drawLine(vec2(0.25f, -0.25f), vec2(0.25f, 0.25f));
-	drawLine(vec2(0.25f, 0.25f), vec2(-0.25f, 0.25f));
-	drawLine(vec2(-0.25f, 0.25f), vec2(-0.25f, -0.25f));
-*/
+	drawViewPort();
 }
 
 //----------------------------------------------------------------------------------------
@@ -360,6 +536,7 @@ void A2::guiLogic()
 	ImGuiWindowFlags windowFlags(ImGuiWindowFlags_AlwaysAutoResize);
 	float opacity(0.5f);
 
+	
 	ImGui::Begin("Properties", &showDebugWindow, ImVec2(100,100), opacity,
 			windowFlags);
 
@@ -367,18 +544,53 @@ void A2::guiLogic()
 		// Add more gui elements here here ...
 
 
-		// Create Button, and check if it was clicked:
-		if( ImGui::Button( "Quit Application" ) ) {
-			glfwSetWindowShouldClose(m_window, GL_TRUE);
-		}
 		if( ImGui::Button( "Reset" ) ) {
 			// Reset to initial values
 			setInitVals();
 		}
 
+		if( ImGui::Button( "Quit Application" ) ) {
+			glfwSetWindowShouldClose(m_window, GL_TRUE);
+		}
+
+		ImGui::Text( "Interaction Mode" );
+		ImGui::RadioButton( "Rotate View", &currentModeInt, 0 );
+		ImGui::RadioButton( "Translate View", &currentModeInt, 1 );
+		ImGui::RadioButton( "Perspective", &currentModeInt, 2 );
+		ImGui::RadioButton( "Rotate Model", &currentModeInt, 3 );
+		ImGui::RadioButton( "Translate Model", &currentModeInt, 4 );
+		ImGui::RadioButton( "Scale Model", &currentModeInt, 5 );
+		ImGui::RadioButton( "Viewport", &currentModeInt, 6 );
+
+		ImGui::Text( "Near Plane: %.1f", n );
+		ImGui::Text( "Far Plane: %.1f", f );
+
 		ImGui::Text( "Framerate: %.1f FPS", ImGui::GetIO().Framerate );
 
 	ImGui::End();
+}
+
+//----------------------------------------------------------------------------------------
+void A2::updateCurrentMode()
+{
+	switch(currentModeInt)
+	{
+		case 0: currentMode = Mode::RotView;
+			break;
+		case 1: currentMode = Mode::TranslView;
+			break;
+		case 2: currentMode = Mode::Persp;
+			break;
+		case 3: currentMode = Mode::RotMod;
+			break;
+		case 4: currentMode = Mode::TranslMod;
+			break;
+		case 5: currentMode = Mode::ScaMod;
+			break;
+		case 6: currentMode = Mode::ViewP;
+			break;
+	}
+
 }
 
 //----------------------------------------------------------------------------------------
@@ -457,26 +669,24 @@ bool A2::mouseMoveEvent (
 ) {
 	bool eventHandled(false);
 	current_xpos = xPos;
+	current_ypos = yPos;
 
 	if (!ImGui::IsMouseHoveringAnyWindow()) {
 		if (mouseLActive || mouseMActive || mouseRActive)
 		{
-			mat4 xTransform = mat4(1.0f);
-			mat4 yTransform = mat4(1.0f);
-			mat4 zTransform = mat4(1.0f);
+			float diffL = 0;
+			float diffM = 0;
+			float diffR = 0;
 			if (mouseLActive) {
-				float diff = xPos - prev_xpos_L;
-				xTransform = makeTransMat(Axis::x, diff/100);
+				diffL = (xPos - prev_xpos_L)/100;
 			}
 			if (mouseMActive) {
-				float diff = xPos - prev_xpos_M;
-				yTransform = makeTransMat(Axis::y, diff/100);
+				diffM = (xPos - prev_xpos_M)/100;
 			}
 			if (mouseRActive) {
-				float diff = xPos - prev_xpos_R;
-				zTransform = makeTransMat(Axis::z, diff/100);
+				diffR = (xPos - prev_xpos_R)/100;
 			}
-			modelMat = prev_model * xTransform * yTransform * zTransform;
+			applyTransMat(diffL, diffM, diffR);
 		}
 	}
 
@@ -496,9 +706,9 @@ bool A2::mouseButtonInputEvent (
 
 	if (!ImGui::IsMouseHoveringAnyWindow()) {
 		if (actions == GLFW_PRESS) {
-			prev_model = modelMat;
 			if (button == GLFW_MOUSE_BUTTON_LEFT) {
 				prev_xpos_L = current_xpos;
+				prev_ypos_L = current_ypos;
 				mouseLActive = true;
 			}
 			if (button == GLFW_MOUSE_BUTTON_MIDDLE) {
@@ -508,6 +718,19 @@ bool A2::mouseButtonInputEvent (
 			if (button == GLFW_MOUSE_BUTTON_RIGHT) {
 				prev_xpos_R = current_xpos;
 				mouseRActive = true;
+			}
+			bool prevMouseActive = mouseActive;
+			mouseActive = mouseLActive || mouseMActive || mouseRActive;
+
+			if (!prevMouseActive && mouseActive)
+			{
+				rotatePrev = rotateMat;
+				scalePrev = scaleMat;
+				translPrev = translMat;
+				rotateVPrev = rotateView;
+				translVPrev = translView;
+				invTranslVPrev = invTranslView;
+				thPrev = th;
 			}
 		}
 	} 
@@ -522,6 +745,7 @@ bool A2::mouseButtonInputEvent (
 		if (button == GLFW_MOUSE_BUTTON_RIGHT) {
 			mouseRActive = false;
 		}
+		mouseActive = mouseLActive || mouseMActive || mouseRActive;
     }
 
 	return eventHandled;
@@ -553,6 +777,8 @@ bool A2::windowResizeEvent (
 	bool eventHandled(false);
 
 	// Fill in with event handling code...
+	winWidth = width;
+	winHeight = height;
 
 	return eventHandled;
 }
@@ -575,9 +801,44 @@ bool A2::keyInputEvent (
 			glfwSetWindowShouldClose(m_window, GL_TRUE);
 			eventHandled = true;
 		}
+		if (key == GLFW_KEY_A) {
+			cout << "A key pressed" << endl;
+			setInitVals();
+			eventHandled = true;
+		}
 		if (key == GLFW_KEY_R) {
 			cout << "R key pressed" << endl;
-			setInitVals();
+			currentModeInt = 3;
+			eventHandled = true;
+		}
+		if (key == GLFW_KEY_T) {
+			cout << "T key pressed" << endl;
+			currentModeInt = 4;
+			eventHandled = true;
+		}
+		if (key == GLFW_KEY_S) {
+			cout << "S key pressed" << endl;
+			currentModeInt = 5;
+			eventHandled = true;
+		}
+		if (key == GLFW_KEY_O) {
+			cout << "O key pressed" << endl;
+			currentModeInt = 0;
+			eventHandled = true;
+		}
+		if (key == GLFW_KEY_N) {
+			cout << "N key pressed" << endl;
+			currentModeInt = 1;
+			eventHandled = true;
+		}
+		if (key == GLFW_KEY_P) {
+			cout << "P key pressed" << endl;
+			currentModeInt = 2;
+			eventHandled = true;
+		}
+		if (key == GLFW_KEY_V) {
+			cout << "V key pressed" << endl;
+			currentModeInt = 6;
 			eventHandled = true;
 		}
 	}
