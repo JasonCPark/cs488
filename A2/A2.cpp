@@ -70,18 +70,11 @@ void A2::setInitVals()
 	rotateMat = mat4(1.0f); // Identity Matrix
 	scaleMat = mat4(1.0f);
 	translMat = mat4(1.0f);
-	rotateView = mat4(1.0f);
-	translView = mat4(
+	viewMat = mat4(
 		1, 0, 0, 0,
 		0, 1, 0, 0,
 		0, 0, 1, 0,
-		0, 0, -4, 1
-	);
-	invTranslView = mat4(
-		1, 0, 0, 0,
-		0, 1, 0, 0,
-		0, 0, 1, 0,
-		0, 0, 4, 1
+		0, 0, -5, 1
 	);
 }
 
@@ -137,14 +130,6 @@ void A2::orthoProject()
 //----------------------------------------------------------------------------------------
 void A2::perspProject()
 {
-/*
-	mat4 perspMat = mat4(
-		(2*n)/(r-l), 0, 0, 0,
-		0, (2*n)/(t-b), 0, 0,
-		(r+l)/(r-l),(t+b)/(t-b),-(f+n)/(f-n),-1,
-		0, 0, -(2*f*n)/(f-n), 0
-	);
-*/
 	mat4 perspMat = mat4(
 		(1/tan(th/2))/((r-l)/(t-b)), 0, 0, 0,
 		0, 1/tan(th/2), 0, 0,
@@ -153,20 +138,141 @@ void A2::perspProject()
 	);
 	for (int i=0; i<8; i++)
 	{
-		vec4 projVert = perspMat * transformed_verts[i];
-		verts_2D[i] = vec2(projVert.x/projVert.w, projVert.y/projVert.w);
-		//cout << projVert << endl;
+		proj_verts[i] = perspMat * transformed_verts[i];
 	}
 	for (int i=0; i<4; i++)
 	{
-		vec4 projVert = perspMat * transformed_model_gnomon[i];
-		model_gnomon_2D[i] = vec2(projVert.x/projVert.w, projVert.y/projVert.w);
+		proj_model_gnomon_verts[i] = perspMat * transformed_model_gnomon[i];
+		proj_world_gnomon_verts[i] = perspMat * transformed_world_gnomon[i];
 	}
-	for (int i=0; i<4; i++)
+
+	for (int i=0; i<12; i++)
 	{
-		vec4 projVert = perspMat * transformed_world_gnomon[i];
-		world_gnomon_2D[i] = vec2(projVert.x/projVert.w, projVert.y/projVert.w);
+		vec4 vert1 = proj_verts[edges[i][0]];
+		vec4 vert2 = proj_verts[edges[i][1]];
+		clipEdge(i, vert1, vert2, &(lines[i][0]), &(lines[i][1]));
 	}
+	for (int i=0; i<3; i++)
+	{
+		vec4 vert1 = proj_model_gnomon_verts[gnomon_edges[i][0]];
+		vec4 vert2 = proj_model_gnomon_verts[gnomon_edges[i][1]];
+		clipEdge(i, vert1, vert2, &(model_gnomon_lines[i][0]), &(model_gnomon_lines[i][1]));
+		vert1 = proj_world_gnomon_verts[gnomon_edges[i][0]];
+		vert2 = proj_world_gnomon_verts[gnomon_edges[i][1]];
+		clipEdge(i, vert1, vert2, &(world_gnomon_lines[i][0]), &(world_gnomon_lines[i][1]));
+	}
+}
+
+//----------------------------------------------------------------------------------------
+void A2::clipEdge(int i, vec4 vert1, vec4 vert2, vec2* targ1, vec2* targ2)
+{
+	unsigned char v1Code = getAutoCode(vert1);
+	unsigned char v2Code = getAutoCode(vert2);
+	unsigned char intersects = v1Code | v2Code;
+	*targ1 = vec2(vert1.x/vert1.w, vert1.y/vert1.w);
+	*targ2 = vec2(vert2.x/vert2.w, vert2.y/vert2.w);
+	if (intersects == 0)
+	{
+		return;
+	}
+	if ((v2Code & v1Code) != 0)
+	{
+		*targ1 = vec2(-1,-1);
+		*targ2 = vec2(-1,-1);
+		return;
+	}
+	if (intersects & 0x1) {
+		float B1 = vert1.w + vert1.x;
+		float B2 = vert2.w + vert2.x;
+		float a = B1/(B1-B2);
+		if (v1Code & 0x1) {
+			*targ1 = getIntersectVert(vert1, vert2, a);
+		} else {
+			*targ2 = getIntersectVert(vert1, vert2, a);
+		}
+	}
+	if (intersects & 0x2) {
+		float B1 = vert1.w - vert1.x;
+		float B2 = vert2.w - vert2.x;
+		float a = B1/(B1-B2);
+		if (v1Code & 0x2) {
+			*targ1 = getIntersectVert(vert1, vert2, a);
+		} else {
+			*targ2 = getIntersectVert(vert1, vert2, a);
+		}
+	}
+	if (intersects & 0x4) {
+		float B1 = vert1.w + vert1.y;
+		float B2 = vert2.w + vert2.y;
+		float a = B1/(B1-B2);
+		if (v1Code & 0x4) {
+			*targ1 = getIntersectVert(vert1, vert2, a);
+		} else {
+			*targ2 = getIntersectVert(vert1, vert2, a);
+		}
+	}
+	if (intersects & 0x8) {
+		float B1 = vert1.w - vert1.y;
+		float B2 = vert2.w - vert2.y;
+		float a = B1/(B1-B2);
+		if (v1Code & 0x8) {
+			*targ1 = getIntersectVert(vert1, vert2, a);
+		} else {
+			*targ2 = getIntersectVert(vert1, vert2, a);
+		}
+	}
+	if (intersects & 0x10) {
+		float B1 = vert1.w + vert1.z;
+		float B2 = vert2.w + vert2.z;
+		float a = B1/(B1-B2);
+		if (v1Code & 0x10) {
+			*targ1 = getIntersectVert(vert1, vert2, a);
+		} else {
+			*targ2 = getIntersectVert(vert1, vert2, a);
+		}
+	}
+	if (intersects & 0x20) {
+		float B1 = vert1.w - vert1.z;
+		float B2 = vert2.w - vert2.z;
+		float a = B1/(B1-B2);
+		if (v1Code & 0x20) {
+			*targ1 = getIntersectVert(vert1, vert2, a);
+		} else {
+			*targ2 = getIntersectVert(vert1, vert2, a);
+		}
+	}
+}
+
+//----------------------------------------------------------------------------------------
+vec2 A2::getIntersectVert(vec4 vert1, vec4 vert2, float a)
+{
+	vec4 intersect = (1-a)*vert1 + a*vert2;
+	return vec2(intersect.x/intersect.w, intersect.y/intersect.w);
+}
+
+//----------------------------------------------------------------------------------------
+unsigned char A2::getAutoCode(vec4 vert)
+{
+	unsigned char flag = 0;
+	if (vert.w + vert.x < 0) {
+		flag |= 0x1;
+	}
+	if (vert.w - vert.x < 0) {
+		flag |= 0x2;
+	}
+	if (vert.w + vert.y < 0) {
+		flag |= 0x4;
+	}
+	if (vert.w - vert.y < 0) {
+		flag |= 0x8;
+	}
+	if (vert.w + vert.z < 0) {
+		flag |= 0x10;
+	}
+	if (vert.w - vert.z < 0) {
+		flag |= 0x20;
+	}
+	return flag;
 }
 
 //----------------------------------------------------------------------------------------
@@ -198,45 +304,40 @@ void A2::applyTransMat(float x, float y, float z)
 		mat4 xRotate = rotateX(x);
 		mat4 yRotate = rotateY(y);
 		mat4 zRotate = rotateZ(z);
-		rotateView = rotateVPrev * xRotate * yRotate * zRotate;
+		viewMat = zRotate * yRotate * xRotate * viewPrev;
 	}
 	if (currentMode == Mode::TranslView)
 	{
-		mat4 xTransl = translate(x, 0, 0, rotateView);
-		mat4 yTransl = translate(0, y, 0, rotateView);
-		mat4 zTransl = translate(0, 0, z, rotateView);
-		translView = translVPrev * xTransl * yTransl * zTransl;
-
-		mat4 invXTransl = translate(-x, 0, 0, rotateView);
-		mat4 invYTransl = translate(0, -y, 0, rotateView);
-		mat4 invZTransl = translate(0, 0, -z, rotateView);
-		invTranslView = invTranslVPrev * invXTransl * invYTransl * invZTransl;
+		mat4 xTransl = translate(-x, 0, 0, mat4(1.0f));
+		mat4 yTransl = translate(0, -y, 0, mat4(1.0f));
+		mat4 zTransl = translate(0, 0, -z, mat4(1.0f));
+		viewMat = zTransl * yTransl * xTransl * viewPrev;
 	}
 	if (currentMode == Mode::Persp)
 	{
-		th = thPrev + x;
+		th = clamp(thPrev + x, 0.09f, 2.8f);
 		n = nPrev + y;
 		f = fPrev + z;
 	}
 	if (currentMode == Mode::ViewP)
 	{
-		float norm_prev_xpos = prev_xpos_L/(winWidth/2)-1;
-		float norm_xpos = current_xpos/(winWidth/2)-1;
-		float norm_prev_ypos = -(prev_ypos_L/(winHeight/2)-1);
-		float norm_ypos = -(current_ypos/(winHeight/2)-1);
+		float norm_prev_xpos = clamp(prev_xpos_L/(winWidth/2)-1, -1.0f, 1.0f);
+		float norm_xpos = clamp(current_xpos/(winWidth/2)-1, -1.0f, 1.0f);
+		float norm_prev_ypos = clamp(-(prev_ypos_L/(winHeight/2)-1), -1.0f, 1.0f);
+		float norm_ypos = clamp(-(current_ypos/(winHeight/2)-1), -1.0f, 1.0f);
 		if (norm_prev_xpos < norm_xpos) {
-			l = norm_prev_xpos;
-			r = norm_xpos;
+			viewpL = norm_prev_xpos;
+			viewpR = norm_xpos;
 		} else {
-			l = norm_xpos;
-			r = norm_prev_xpos;
+			viewpL = norm_xpos;
+			viewpR = norm_prev_xpos;
 		}
 		if (norm_prev_ypos > norm_ypos) { 
-			t = norm_prev_ypos;
-			b = norm_ypos;
+			viewpT = norm_prev_ypos;
+			viewpB = norm_ypos;
 		} else {
-			t = norm_ypos;
-			b = norm_prev_ypos;
+			viewpT = norm_ypos;
+			viewpB = norm_prev_ypos;
 		}
 	}
 }
@@ -244,10 +345,10 @@ void A2::applyTransMat(float x, float y, float z)
 //----------------------------------------------------------------------------------------
 void A2::drawViewPort()
 {
-	vec2 tl = vec2(l,t);
-	vec2 tr = vec2(r,t);
-	vec2 bl = vec2(l,b);
-	vec2 br = vec2(r,b);
+	vec2 tl = vec2(viewpL,viewpT);
+	vec2 tr = vec2(viewpR,viewpT);
+	vec2 bl = vec2(viewpL,viewpB);
+	vec2 br = vec2(viewpR,viewpB);
 	setLineColour(vec3(1, 1, 0));
 	drawLine(tl,tr);
 	drawLine(tr,br);
@@ -325,33 +426,32 @@ mat4 A2::localizeTranslate(mat4 translM, mat4 rotateM)
 //----------------------------------------------------------------------------------------
 vec2 A2::viewPortTrans(vec2 vert)
 {
-	float w = r-l;
-	float h = t-b;
-	return vec2(vert.x,vert.y);
+	float w = viewpR-viewpL;
+	float h = viewpT-viewpB;
+	return vec2((vert.x+1)*(w/2)+viewpL,(vert.y+1)*(h/2)+viewpB);
 }
 
 //----------------------------------------------------------------------------------------
 void A2::transform()
 {
-	mat4 view = rotateView * translView;
 	for (int i=0; i<8; i++)
 	{
 		transformed_verts[i] =
-			view *
+			viewMat *
 			translMat * rotateMat * scaleMat *
 			model_verts[i];
 	}
 	for (int i=0; i<4; i++)
 	{
 		transformed_model_gnomon[i] = 
-			view *
+			viewMat *
 			translMat * rotateMat * 
 			model_gnomon[i];
 	}
 	for (int i=0; i<4; i++)
 	{
 		transformed_world_gnomon[i] = 
-			view *
+			viewMat *
 			world_gnomon[i];
 	}
 }
@@ -362,25 +462,37 @@ void A2::draw2D()
 	setLineColour(vec3(1, 1, 1));
 	for (int i=0; i<12; i++)
 	{
-		drawLine(viewPortTrans(verts_2D[edges[i][0]]), 
-			viewPortTrans(verts_2D[edges[i][1]]));
+		drawLine(viewPortTrans(lines[i][0]), 
+			viewPortTrans(lines[i][1]));
 	}
-	drawGnomon(model_gnomon_2D);
-	drawGnomon(world_gnomon_2D);
+	for (int i=0; i<3; i++)
+	{
+		drawLine(viewPortTrans(model_gnomon_lines[i][0]), 
+			viewPortTrans(model_gnomon_lines[i][1]));
+		drawLine(viewPortTrans(world_gnomon_lines[i][0]), 
+			viewPortTrans(world_gnomon_lines[i][1]));
+	}
+	drawGnomon();
 }
 
 //----------------------------------------------------------------------------------------
-void A2::drawGnomon(vec2 *gnomon)
+void A2::drawGnomon()
 {
 	setLineColour(vec3(1, 0, 0));
-	drawLine(viewPortTrans(gnomon[gnomon_edges[0][0]]),
-		viewPortTrans(gnomon[gnomon_edges[0][1]]));
+	drawLine(viewPortTrans(model_gnomon_lines[0][0]), 
+		viewPortTrans(model_gnomon_lines[0][1]));
+	drawLine(viewPortTrans(world_gnomon_lines[0][0]), 
+		viewPortTrans(world_gnomon_lines[0][1]));
 	setLineColour(vec3(0, 1, 0));
-	drawLine(viewPortTrans(gnomon[gnomon_edges[1][0]]),
-		viewPortTrans(gnomon[gnomon_edges[1][1]]));
+	drawLine(viewPortTrans(model_gnomon_lines[1][0]), 
+		viewPortTrans(model_gnomon_lines[1][1]));
+	drawLine(viewPortTrans(world_gnomon_lines[1][0]), 
+		viewPortTrans(world_gnomon_lines[1][1]));
 	setLineColour(vec3(0, 0, 1));
-	drawLine(viewPortTrans(gnomon[gnomon_edges[2][0]]),
-		viewPortTrans(gnomon[gnomon_edges[2][1]]));
+	drawLine(viewPortTrans(model_gnomon_lines[2][0]), 
+		viewPortTrans(model_gnomon_lines[2][1]));
+	drawLine(viewPortTrans(world_gnomon_lines[2][0]), 
+		viewPortTrans(world_gnomon_lines[2][1]));
 }
 
 //----------------------------------------------------------------------------------------
@@ -727,9 +839,9 @@ bool A2::mouseButtonInputEvent (
 				rotatePrev = rotateMat;
 				scalePrev = scaleMat;
 				translPrev = translMat;
-				rotateVPrev = rotateView;
-				translVPrev = translView;
-				invTranslVPrev = invTranslView;
+				viewPrev = viewMat;
+				nPrev = n;
+				fPrev = f;
 				thPrev = th;
 			}
 		}
