@@ -76,8 +76,9 @@ protected:
 	void transform();
 	void orthoProject();
 	void perspProject();
+	void clipEdge(int i, glm::vec4 vect1, glm::vec4 vect2, glm::vec2* targ1, glm::vec2* targ2);
 	void draw2D();
-	void drawGnomon(glm::vec2 *gnomon);
+	void drawGnomon();
 	void drawViewPort();
 
 	void applyTransMat(float x, float y, float z);
@@ -88,6 +89,8 @@ protected:
 	glm::mat4 scale(float x, float y, float z);
 	glm::mat4 localizeTranslate(glm::mat4 translM, glm::mat4 rotateM);
 	glm::vec2 viewPortTrans(glm::vec2 vert);
+	glm::vec2 getIntersectVert(glm::vec4 vert1, glm::vec4 vert2, float a);
+	unsigned char getAutoCode(glm::vec4 vert);
 
 	ShaderProgram m_shader;
 
@@ -99,19 +102,19 @@ protected:
 
 	glm::vec3 m_currentLineColour;
 
-
+	glm::vec2 lines[12][2];
+	glm::vec2 model_gnomon_lines[3][2];
+	glm::vec2 world_gnomon_lines[3][2];
 	
 	int edges[12][2] = {
 		{0,1},
 		{1,2},
 		{2,3},
 		{3,0},
-
 		{4,5},
 		{5,6},
 		{6,7},
 		{7,4},
-
 		{0,4},
 		{1,5},
 		{2,6},
@@ -130,12 +133,15 @@ protected:
 	glm::vec4 world_gnomon[4];
 
 	glm::vec4 transformed_verts[8];
+	glm::vec4 proj_verts[8];
 	glm::vec2 verts_2D[8];
 
 	glm::vec4 transformed_model_gnomon[4];
+	glm::vec4 proj_model_gnomon_verts[8];
 	glm::vec2 model_gnomon_2D[4];
 
 	glm::vec4 transformed_world_gnomon[4];
+	glm::vec4 proj_world_gnomon_verts[8];
 	glm::vec2 world_gnomon_2D[4];
 
 	glm::mat4 rotatePrev;
@@ -146,18 +152,12 @@ protected:
 	glm::mat4 scaleMat;
 	glm::mat4 translMat;
 
-	glm::mat4 rotateVPrev;
-	glm::mat4 translVPrev;
+	glm::mat4 viewMat;
+	glm::mat4 viewPrev;
 
-	glm::mat4 rotateView;
-	glm::mat4 translView;
-
-	glm::mat4 invTranslView;
-	glm::mat4 invTranslVPrev;
-
-	float n = 1;
+	float n = 3;
 	float nPrev = n;
-	float f = 5;
+	float f = 7;
 	float fPrev = f;
 	float l = -0.9;
 	float r = 0.9;
@@ -166,18 +166,22 @@ protected:
 	float th = 0.52f;
 	float thPrev = th;
 
+	float viewpT = 0.9;
+	float viewpB = -0.9;
+	float viewpL = -0.9;
+	float viewpR = 0.9;
 
 	// Fields related to rotation by mouse drag
-	float current_xpos;
-	float current_ypos;
-	float prev_xpos_L;
-	float prev_ypos_L;
-	float prev_xpos_M;
-	float prev_xpos_R;
-	bool mouseActive;
-    bool mouseLActive;
-    bool mouseMActive;
-    bool mouseRActive;
+	float current_xpos = 0.0f;
+	float current_ypos = 0.0f;
+	float prev_xpos_L = 0.0f;
+	float prev_ypos_L = 0.0f;
+	float prev_xpos_M = 0.0f;
+	float prev_xpos_R = 0.0f;
+	bool mouseActive = false;
+    bool mouseLActive = false;
+    bool mouseMActive = false;
+    bool mouseRActive = false;
 	
 	float winWidth = 768;
 	float winHeight = 768;
