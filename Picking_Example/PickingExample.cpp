@@ -72,7 +72,7 @@ void PickingExample::init()
 	initLightSources();
 
 	std::default_random_engine generator;
-	std::uniform_real_distribution<double> distribution(0.0,1.0);
+	std::uniform_real_distribution<double> distribution(0.0,2.0);
 
 	for( size_t idx = 0; idx < 100; ++idx ) {
 		glm::mat4 T = glm::translate( glm::mat4(), glm::vec3(

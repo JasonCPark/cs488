@@ -1,0 +1,13 @@
+COMPILATION
+Compiled according to assignment instructions.
+Run using the command (in the A3 directory):
+./A3 Assets/myPuppet.lua
+
+MANUAL
+Designed according to assignment specifications.
+
+Tested on graphics lab machine gl17
+
+Trackball implementation by Greg Veres and Michael Hardy.
+
+Picking implementation from cs488/Picking_Example.

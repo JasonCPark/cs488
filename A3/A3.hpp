@@ -47,7 +47,7 @@ protected:
 
 	void initPerspectiveMatrix();
 	void uploadCommonSceneUniforms();
-	void renderSceneGraph(const SceneNode &node);
+	void renderSceneGraph(SceneNode &node);
 	void renderArcCircle();
 
 	glm::mat4 m_perpsective;
@@ -77,4 +77,54 @@ protected:
 	std::string m_luaSceneFile;
 
 	std::shared_ptr<SceneNode> m_rootNode;
+
+
+	// 
+
+	glm::vec3 get_arcball_vec(int x, int y);
+
+	// Interface Elements
+	int currentMode = 0; // Position/Orientation Mode
+
+	// Mouse Elements
+	float current_x = 0;
+	float current_y = 0;
+	float prev_x_L = 0;
+	float prev_y_L = 0;
+	float prev_x_M = 0;
+	float prev_y_M = 0;
+	float prev_x_R = 0;
+	float prev_y_R = 0;
+
+	bool mouseLActive = false;
+	bool mouseMActive = false;
+	bool mouseRActive = false;
+
+	void applyMouse(
+		float diffLx, float diffLy,
+		float diffMx, float diffMy, 
+		float diffRx, float diffRy);
+
+	// Trackball Elements
+	void vCalcRotVec(float fNewX, float fNewY,
+                 float fOldX, float fOldY,
+                 float fDiameter,
+                 float *fVecX, float *fVecY, float *fVecZ);
+
+	glm::mat4 vAxisRotMatrix(float fVecX, float fVecY, float fVecZ);
+
+	// Window Elemenets
+	float winWidth = 1024;
+	float winHeight = 768;
+
+	// Picking Elements
+	int jointMap(int ind);
+	bool do_picking = false;
+	bool selected[46];
+
+	// Option Elements
+	bool render_circle = false;
+	bool z_buffer = true;
+	bool backface_cull = false;
+	bool frontface_cull = false;
 };
