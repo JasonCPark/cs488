@@ -112,6 +112,22 @@ int SceneNode::totalSceneNodes() const {
 }
 
 //---------------------------------------------------------------------------------------
+Intersection SceneNode::intersect(Ray ray) {
+	float lowestT = numeric_limits<float>::max();
+	Intersection frontIntersect = Intersection();
+	frontIntersect.did_hit = false;
+	for (SceneNode * node : this->children) {
+		Intersection nodeIntersect = node->intersect(ray);
+		if (nodeIntersect.did_hit) {
+			if (nodeIntersect.t < lowestT) {
+				frontIntersect = nodeIntersect;
+			}
+		}
+	}
+	return frontIntersect;
+}
+
+//---------------------------------------------------------------------------------------
 std::ostream & operator << (std::ostream & os, const SceneNode & node) {
 
 	//os << "SceneNode:[NodeType: ___, name: ____, id: ____, isSelected: ____, transform: ____"

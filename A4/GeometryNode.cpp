@@ -1,4 +1,7 @@
 #include "GeometryNode.hpp"
+#include <glm/glm.hpp>
+using namespace glm;
+using namespace std;
 
 //---------------------------------------------------------------------------------------
 GeometryNode::GeometryNode(
@@ -6,6 +9,22 @@ GeometryNode::GeometryNode(
 	: SceneNode( name )
 	, m_material( mat )
 	, m_primitive( prim )
+{
+	m_nodeType = NodeType::GeometryNode;
+}
+
+GeometryNode::~GeometryNode()
+{
+	delete m_material;
+	delete m_primitive;
+}
+
+//---------------------------------------------------------------------------------------
+GeometryNode::GeometryNode(
+	const std::string & name, Mesh* mesh, Material *mat )
+	: SceneNode( name )
+	, m_material( mat )
+	, m_primitive( new MeshPrim(mesh, mat4(1.0f)))
 {
 	m_nodeType = NodeType::GeometryNode;
 }
@@ -24,4 +43,11 @@ void GeometryNode::setMaterial( Material *mat )
 	//     crash the program.
 
 	m_material = mat;
+}
+
+Intersection GeometryNode::intersect(Ray ray) {
+	Intersection myIntersect = this->m_primitive->intersect(ray);
+	myIntersect.materia = dynamic_cast<PhongMaterial*>(this->m_material);
+
+	return myIntersect;
 }

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Material.hpp"
+#include "Primitive.hpp"
 
 #include <glm/glm.hpp>
 
@@ -37,6 +38,9 @@ public:
     void rotate(char axis, float angle);
     void scale(const glm::vec3& amount);
     void translate(const glm::vec3& amount);
+    
+    //-- Ray Intersection
+    virtual Intersection intersect(Ray ray);
 
 
 	friend std::ostream & operator << (std::ostream & os, const SceneNode & node);

@@ -6,6 +6,8 @@
 #include "Light.hpp"
 #include "Image.hpp"
 
+const float PI = 3.1415926535898;
+
 void A4_Render(
 		// What to render
 		SceneNode * root,

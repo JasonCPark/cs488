@@ -6,8 +6,6 @@
 
 #include <glm/glm.hpp>
 
-#include "Primitive.hpp"
-
 struct Triangle
 {
 	size_t v1;
@@ -22,11 +20,10 @@ struct Triangle
 };
 
 // A polygonal mesh.
-class Mesh : public Primitive {
+class Mesh {
 public:
   Mesh( const std::string& fname );
   
-private:
 	std::vector<glm::vec3> m_vertices;
 	std::vector<Triangle> m_faces;
 

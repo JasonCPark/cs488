@@ -204,7 +204,6 @@ int gr_nh_sphere_cmd(lua_State* L)
   data->node = 0;
 
   const char* name = luaL_checkstring(L, 1);
-
   glm::vec3 pos;
   get_tuple(L, 2, &pos[0], 3);
 
@@ -234,7 +233,20 @@ int gr_nh_box_cmd(lua_State* L)
 
   double size = luaL_checknumber(L, 3);
 
-  data->node = new GeometryNode(name, new NonhierBox(pos, size));
+	std::string sfname = "Assets/cube.obj";
+
+	// Use a dictionary structure to make sure every mesh is loaded
+	// at most once.
+	auto i = mesh_map.find( sfname );
+	Mesh *mesh = nullptr;
+
+	if( i == mesh_map.end() ) {
+		mesh = new Mesh( sfname );
+	} else {
+		mesh = i->second;
+	}
+
+  data->node = new GeometryNode(name, new NonhierMeshPrim(pos, size, mesh));
 
   luaL_getmetatable(L, "gr.node");
   lua_setmetatable(L, -2);
@@ -268,6 +280,43 @@ int gr_mesh_cmd(lua_State* L)
 	}
 
 	data->node = new GeometryNode( name, mesh );
+
+	luaL_getmetatable(L, "gr.node");
+	lua_setmetatable(L, -2);
+
+	return 1;
+}
+
+// Create a polygonal mesh node
+extern "C"
+int gr_nh_mesh_cmd(lua_State* L)
+{
+	GRLUA_DEBUG_CALL;
+
+	gr_node_ud* data = (gr_node_ud*)lua_newuserdata(L, sizeof(gr_node_ud));
+	data->node = 0;
+
+	const char* name = luaL_checkstring(L, 1);
+	const char* obj_fname = luaL_checkstring(L, 2);
+  glm::vec3 pos;
+  get_tuple(L, 3, &pos[0], 3);
+  double size = luaL_checknumber(L, 4);
+
+
+	std::string sfname( obj_fname );
+
+	// Use a dictionary structure to make sure every mesh is loaded
+	// at most once.
+	auto i = mesh_map.find( sfname );
+	Mesh *mesh = nullptr;
+
+	if( i == mesh_map.end() ) {
+		mesh = new Mesh( obj_fname );
+	} else {
+		mesh = i->second;
+	}
+
+	data->node = new GeometryNode( name, new NonhierMeshPrim(pos, size, mesh) );
 
 	luaL_getmetatable(L, "gr.node");
 	lua_setmetatable(L, -2);
@@ -522,6 +571,7 @@ static const luaL_Reg grlib_functions[] = {
   {"cube", gr_cube_cmd},
   {"nh_sphere", gr_nh_sphere_cmd},
   {"nh_box", gr_nh_box_cmd},
+  {"nh_mesh", gr_nh_mesh_cmd},
   {"mesh", gr_mesh_cmd},
   {"light", gr_light_cmd},
   {"render", gr_render_cmd},
