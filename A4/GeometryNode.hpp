@@ -12,6 +12,7 @@ public:
 		Material *mat = nullptr );
 	void setMaterial( Material *material );
 	Intersection intersect(Ray ray);
+	void applyTrans(glm::mat4 parentTrans);
 	
 	~GeometryNode();
 

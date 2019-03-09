@@ -92,19 +92,25 @@ void SceneNode::rotate(char axis, float angle) {
 			break;
 	}
 	mat4 rot_matrix = glm::rotate(degreesToRadians(angle), rot_axis);
-	set_transform( rot_matrix * trans );
+	set_transform(rot_matrix * trans);
 }
 
 //---------------------------------------------------------------------------------------
 void SceneNode::scale(const glm::vec3 & amount) {
-	set_transform( glm::scale(amount) * trans );
+	set_transform(glm::scale(amount) * trans);
 }
 
 //---------------------------------------------------------------------------------------
 void SceneNode::translate(const glm::vec3& amount) {
-	set_transform( glm::translate(amount) * trans );
+	set_transform(glm::translate(amount) * trans);
 }
 
+void SceneNode::applyTrans(mat4 parentTrans) {
+	parentTrans = parentTrans * trans;
+	for (SceneNode * child : this->children) {
+		child->applyTrans(parentTrans);
+	}
+}
 
 //---------------------------------------------------------------------------------------
 int SceneNode::totalSceneNodes() const {
@@ -118,9 +124,10 @@ Intersection SceneNode::intersect(Ray ray) {
 	frontIntersect.did_hit = false;
 	for (SceneNode * node : this->children) {
 		Intersection nodeIntersect = node->intersect(ray);
-		if (nodeIntersect.did_hit) {
+		if (nodeIntersect.did_hit && nodeIntersect.t > 0.01) {
 			if (nodeIntersect.t < lowestT) {
 				frontIntersect = nodeIntersect;
+				lowestT = nodeIntersect.t;
 			}
 		}
 	}

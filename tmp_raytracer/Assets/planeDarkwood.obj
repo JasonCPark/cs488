@@ -1,0 +1,12 @@
+o plane
+
+v -1 0 -1
+v 1 0 -1
+v 1 0 1
+v -1 0 1
+
+f 3 2 1
+f 1 4 3
+
+t 0 Assets/woodChess.png
+t 1 Assets/woodChess.png

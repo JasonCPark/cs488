@@ -10,6 +10,7 @@ GeometryNode::GeometryNode(
 	, m_material( mat )
 	, m_primitive( prim )
 {
+	cout << "GEO CREATED: " << name << endl;
 	m_nodeType = NodeType::GeometryNode;
 }
 
@@ -24,8 +25,9 @@ GeometryNode::GeometryNode(
 	const std::string & name, Mesh* mesh, Material *mat )
 	: SceneNode( name )
 	, m_material( mat )
-	, m_primitive( new MeshPrim(mesh, mat4(1.0f)))
+	, m_primitive( new MeshPrim(mesh))
 {
+	cout << "GEO CREATED: " << name << endl;
 	m_nodeType = NodeType::GeometryNode;
 }
 
@@ -46,8 +48,43 @@ void GeometryNode::setMaterial( Material *mat )
 }
 
 Intersection GeometryNode::intersect(Ray ray) {
+	
 	Intersection myIntersect = this->m_primitive->intersect(ray);
-	myIntersect.materia = dynamic_cast<PhongMaterial*>(this->m_material);
+	Intersection frontIntersect;
+	float lowestT;
+	if (myIntersect.did_hit && myIntersect.t > 0.01) {
+		myIntersect.materia = dynamic_cast<PhongMaterial*>(this->m_material);
+		frontIntersect = myIntersect;
+		lowestT = myIntersect.t;
+	} else {
+		frontIntersect = Intersection();
+		lowestT = numeric_limits<float>::max();
+	}
 
-	return myIntersect;
+	for (SceneNode * node : this->children) {
+		Intersection nodeIntersect = node->intersect(ray);
+		if (nodeIntersect.did_hit && nodeIntersect.t > 0.01) {
+			if (nodeIntersect.t < lowestT) {
+				frontIntersect = nodeIntersect;
+				lowestT = nodeIntersect.t;
+			}
+		}
+	}
+	return frontIntersect;
+}
+
+void GeometryNode::applyTrans(mat4 parentTrans) {
+	parentTrans = parentTrans * trans;
+	/*
+	for (int i=0; i<4; i++) {
+		for (int j=0; j<4; j++) {
+			cout << trans[j][i] << ",";
+		}
+		cout << endl;
+	}
+	*/
+	this->m_primitive->applyTrans(parentTrans);
+	for (SceneNode * child : this->children) {
+		child->applyTrans(parentTrans);
+	}
 }

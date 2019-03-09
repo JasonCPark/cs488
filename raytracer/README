@@ -1,0 +1,66 @@
+COMPILATION
+Change the filename in Main.cpp to select the script to be rendered.
+eg. std::string filename = "Assets/sample.lua";
+Ensure all scripts (and the script filename) specify filenames relative
+to the A4 directory
+(so .obj files in Assets, must be specified with Assets/<filename>.obj)
+Run using this command in the A4 directory:
+./A4
+
+
+=================================================
+MANUAL
+Adjust features of ray tracer by changing the values of the global variable flags in A4.cpp.
+WARNING: Enabling all flags (especially motion blur and depth of field) drastically slows rendering time.
+
+
+Texture Mapping (Meshes only):
+Create a .obj file with additional "t" commands for each mesh face. Formatted as follows:
+t <face_index> <relative_file_pathname>
+eg.
+t 0 Assets/checkerboard.png
+Faces are 0-indexed in the order they appear in the .obj.
+
+Refraction:
+gr.material has been modified to take in another float argument after shininess.
+This is the index of refraction, and the material will refract light if set to any
+value greater than 0.
+
+Glossy Reflection/Transmission:
+gr.material will also take in another boolean argument after index of refraction,
+which indicates if this material will demonstrate glossy reflection/transmission.
+
+Motion Blur:
+Enable the motion blur flag, then for the object you wish to give motion blur, when creating the shape
+in the .lua, give it an extra vec3 argument describing its vector of movement.
+eg.
+ball = gr.nh_sphere('ball', {-2, 3, -6}, 3, {0,1.5,0})
+
+=================================================
+OBJECTIVES
+
+Completed:
+-Refraction
+-Glossy Transmission
+-Glossy Reflection
+-Texture Mapping
+-Soft Shadows
+-Depth of Field
+-Motion Blur
+-Regular Sampling
+-Final Scene
+
+Incomplete:
+-Animation
+
+=================================================
+
+Tested on graphics lab machine gl17
+
+
+=================================================
+Acknowledgements
+
+Chessboard texture from https://www.freepik.com/free-vector/chess-background-design_1101156.htm
+Snowglobe tree mesh from https://www.turbosquid.com/3d-models/free-tree-3d-model/592617
+Christmas tree mesh from https://www.turbosquid.com/3d-models/tree-3ds-free/1140888

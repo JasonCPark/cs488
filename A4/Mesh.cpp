@@ -24,6 +24,55 @@ Mesh::Mesh( const std::string& fname )
 			m_faces.push_back( Triangle( s1 - 1, s2 - 1, s3 - 1 ) );
 		}
 	}
+	/*
+	std::cout << "Constructor: Vertices" << std::endl;
+	for (int i=0; i<m_vertices.size(); i++) {
+		for (int j=0; j<3; j++) {
+			std::cout << m_vertices[i][j] << ", ";
+		}
+		std::cout << std::endl;
+	}
+	std::cout << std::endl;
+	*/
+}
+
+void Mesh::applyTrans(glm::mat4 trans) {
+	/*
+	std::cout << "Transformation Matrix" << std::endl;
+	for (int i=0; i<4; i++) {
+		for (int j=0; j<4; j++) {
+			std::cout << trans[j][i] << ", ";
+		}
+		std::cout << std::endl;
+	}
+		std::cout << std::endl;
+
+
+	std::cout << "Vertices1" << std::endl;
+	for (int i=0; i<m_vertices.size(); i++) {
+		for (int j=0; j<3; j++) {
+			std::cout << m_vertices[i][j] << ", ";
+		}
+		std::cout << std::endl;
+	}
+	std::cout << std::endl;
+	*/
+
+	for (int i=0; i<m_vertices.size(); i++) {
+		glm::vec4 verts4 = glm::vec4(m_vertices[i], 1);
+		verts4 = trans * verts4;
+		m_vertices[i] = glm::vec3(verts4);
+	}
+	/*
+	std::cout << "Vertices2" << std::endl;
+	for (int i=0; i<m_vertices.size(); i++) {
+		for (int j=0; j<3; j++) {
+			std::cout << m_vertices[i][j] << ", ";
+		}
+		std::cout << std::endl;
+	}
+	std::cout << std::endl;
+	*/
 }
 
 std::ostream& operator<<(std::ostream& out, const Mesh& mesh)

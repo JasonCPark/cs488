@@ -5,12 +5,15 @@ Primitive::~Primitive()
 {
 }
 
+void Primitive::applyTrans(glm::mat4 trans){
+}
+
 Intersection Primitive::intersect(Ray ray) {
 	Intersection myIntersect = Intersection();
 	return myIntersect;
 }
 
-Intersection meshIntersect(Ray ray, vec3 pos, float size, Mesh* mesh) {
+Intersection meshIntersect(Ray ray, Mesh* mesh) {
 	std::vector<glm::vec3> vertices = mesh->m_vertices;
 	std::vector<Triangle> faces = mesh->m_faces;
 	vec3 a = ray.pos;
@@ -18,9 +21,9 @@ Intersection meshIntersect(Ray ray, vec3 pos, float size, Mesh* mesh) {
 	float lowestT = std::numeric_limits<float>::max();
 	Intersection myIntersect = Intersection();
 	for (Triangle tri : faces) {
-		vec3 P0 = vertices[tri.v1]*size + pos;
-		vec3 P1 = vertices[tri.v2]*size + pos;
-		vec3 P2 = vertices[tri.v3]*size + pos;
+		vec3 P0 = vertices[tri.v1];
+		vec3 P1 = vertices[tri.v2];
+		vec3 P2 = vertices[tri.v3];
 		mat3 M = {P1-P0, P2-P0, -b_a};
 		mat3 M1 = {a-P0, P2-P0, -b_a};
 		mat3 M2 = {P1-P0, a-P0, -b_a};
@@ -48,31 +51,7 @@ Intersection meshIntersect(Ray ray, vec3 pos, float size, Mesh* mesh) {
 	return myIntersect;
 }
 
-Sphere::~Sphere()
-{
-}
-
-Cube::~Cube()
-{
-}
-
-MeshPrim::~MeshPrim()
-{
-}
-
-Intersection MeshPrim::intersect(Ray ray)
-{
-	return meshIntersect(ray, vec3(0,0,0), 1, m_mesh);
-}
-
-NonhierSphere::~NonhierSphere()
-{
-}
-
-Intersection NonhierSphere::intersect(Ray ray) {
-	float radius = this->m_radius;
-	vec3 pos = this->m_pos;
-
+Intersection sphereIntersect(Ray ray, vec3 pos, float radius) {
 	Intersection myIntersect = Intersection();
 	vec3 L = ray.pos - pos;
 	float a = dot(ray.dir,ray.dir);
@@ -92,8 +71,78 @@ Intersection NonhierSphere::intersect(Ray ray) {
 	return myIntersect;
 }
 
+Sphere::~Sphere()
+{
+}
+
+void Sphere::applyTrans(mat4 trans) {
+	/*
+	vec3 translVec = vec3(trans[3]);
+	m_pos += translVec;
+	*/
+	invTrans = inverse(trans);
+	myTrans = trans;
+}
+
+Intersection Sphere::intersect(Ray ray) {
+	ray.pos = vec3(invTrans * vec4(ray.pos,1));
+	ray.dir = mat3(invTrans) * ray.dir;
+	Intersection myIntersect = sphereIntersect(ray, vec3(0,0,0), 1);
+	myIntersect.pos = vec3(myTrans * vec4(myIntersect.pos, 1));
+	myIntersect.norm = transpose(mat3(invTrans)) * myIntersect.norm;
+	myIntersect.norm = normalize(myIntersect.norm);
+	return myIntersect;
+}
+
+Cube::~Cube()
+{
+	delete m_mesh;
+}
+
+void Cube::applyTrans(mat4 trans) {
+	m_mesh->applyTrans(trans);
+}
+
+Intersection Cube::intersect(Ray ray) {
+	return meshIntersect(ray, m_mesh);
+}
+
+MeshPrim::~MeshPrim()
+{
+	delete m_mesh;
+}
+
+void MeshPrim::applyTrans(mat4 trans) {
+	m_mesh->applyTrans(trans);
+}
+
+Intersection MeshPrim::intersect(Ray ray)
+{
+	return meshIntersect(ray, m_mesh);
+}
+
+NonhierSphere::~NonhierSphere()
+{
+}
+
+Intersection NonhierSphere::intersect(Ray ray) {
+	ray.pos = vec3(invTrans * vec4(ray.pos,1));
+	ray.dir = mat3(invTrans) * ray.dir;
+	Intersection myIntersect = sphereIntersect(ray, vec3(0,0,0), 1);
+	myIntersect.pos = vec3(myTrans * vec4(myIntersect.pos, 1));
+	myIntersect.norm = transpose(mat3(invTrans)) * myIntersect.norm;
+	myIntersect.norm = normalize(myIntersect.norm);
+	return myIntersect;
+}
+
+void NonhierSphere::applyTrans(mat4 trans) {
+	invTrans = inverse(trans);
+	myTrans = trans;
+}
+
 NonhierBox::~NonhierBox()
 {
+	delete m_mesh;
 }
 
 NonhierMeshPrim::~NonhierMeshPrim()
@@ -101,7 +150,11 @@ NonhierMeshPrim::~NonhierMeshPrim()
 	delete m_mesh;
 }
 
+void NonhierMeshPrim::applyTrans(mat4 trans) {
+	m_mesh->applyTrans(trans);
+}
+
 Intersection NonhierMeshPrim::intersect(Ray ray) {
-	return meshIntersect(ray, m_pos, m_size, m_mesh);
+	return meshIntersect(ray, m_mesh);
 }
 

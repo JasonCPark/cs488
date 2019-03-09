@@ -186,7 +186,20 @@ int gr_cube_cmd(lua_State* L)
   data->node = 0;
   
   const char* name = luaL_checkstring(L, 1);
-  data->node = new GeometryNode(name, new Cube());
+
+	std::string sfname = "Assets/cube.obj";
+
+	// Use a dictionary structure to make sure every mesh is loaded
+	// at most once.
+	auto i = mesh_map.find( sfname );
+	Mesh *mesh = nullptr;
+
+	if( i == mesh_map.end() ) {
+		mesh = new Mesh( sfname );
+	} else {
+		mesh = i->second;
+	}
+  data->node = new GeometryNode(name, new Cube(mesh));
 
   luaL_getmetatable(L, "gr.node");
   lua_setmetatable(L, -2);
@@ -209,7 +222,10 @@ int gr_nh_sphere_cmd(lua_State* L)
 
   double radius = luaL_checknumber(L, 3);
 
-  data->node = new GeometryNode(name, new NonhierSphere(pos, radius));
+  GeometryNode* geoNode = new GeometryNode(name, new NonhierSphere());
+  geoNode->scale(vec3(radius,radius,radius));
+  geoNode->translate(pos);
+  data->node = geoNode;
 
   luaL_getmetatable(L, "gr.node");
   lua_setmetatable(L, -2);
@@ -247,6 +263,12 @@ int gr_nh_box_cmd(lua_State* L)
 	}
 
   data->node = new GeometryNode(name, new NonhierMeshPrim(pos, size, mesh));
+  /*
+  GeometryNode* newNode = new GeometryNode( name, new Cube(mesh) );
+  newNode->translate(pos);
+  newNode->scale(vec3(size,size,size));
+	data->node = newNode;
+  */
 
   luaL_getmetatable(L, "gr.node");
   lua_setmetatable(L, -2);
@@ -317,6 +339,12 @@ int gr_nh_mesh_cmd(lua_State* L)
 	}
 
 	data->node = new GeometryNode( name, new NonhierMeshPrim(pos, size, mesh) );
+  /*
+  GeometryNode* newNode = new GeometryNode( name, new NonhierMeshPrim(vec3(0,0,0), 1, mesh) );
+  newNode->translate(pos);
+  newNode->scale(vec3(size,size,size));
+	data->node = newNode;
+  */
 
 	luaL_getmetatable(L, "gr.node");
 	lua_setmetatable(L, -2);

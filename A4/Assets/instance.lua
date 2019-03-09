@@ -7,7 +7,6 @@ grass = gr.material({0.1, 0.7, 0.1}, {0.0, 0.0, 0.0}, 0)
 -- ##############################################
 -- the arc
 -- ##############################################
-
 arc = gr.node('arc')
 arc:translate(0, 0, -10)
 
@@ -36,7 +35,7 @@ scene = gr.node('scene')
 scene:rotate('X', 23)
 
 -- the floor
-plane = gr.mesh('plane', 'plane.obj' )
+plane = gr.mesh('plane', 'Assets/plane.obj' )
 scene:add_child(plane)
 plane:set_material(grass)
 plane:scale(30, 30, 30)
@@ -58,4 +57,5 @@ end
 gr.render(scene,
 	  'instance.png', 256, 256,
 	  {0, 2, 30}, {0, 0, -1}, {0, 1, 0}, 50,
-	  {0.4, 0.4, 0.4}, {gr.light({200, 202, 430}, {0.8, 0.8, 0.8}, {1, 0, 0})})
+      {0.4, 0.4, 0.4}, {gr.light({200, 202, 430}, {0.8, 0.8, 0.8}, {1, 0, 0})})
+

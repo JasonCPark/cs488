@@ -1,0 +1,22 @@
+COMPILATION
+Change the filename in Main.cpp to select the script to be rendered.
+eg. std::string filename = "Assets/sample.lua";
+Ensure all scripts (and the script filename) specify filenames relative
+to the A4 directory
+(so .obj files in Assets, must be specified with Assets/<filename>.obj)
+Run using this command in the A4 directory:
+./A4
+
+
+MANUAL
+Designed according to assignment specifications.
+
+
+EXTRA FEATURE
+Reflective surfaces were implemented. It is set to a recursive depth of 2.
+The unique scene showing this feature can be found in Assets/sample.lua.
+The scene features a coloured sphere and cube on a checkerboard style plane,
+with varying degrees of reflective surfaces.
+
+
+Tested on graphics lab machine gl17

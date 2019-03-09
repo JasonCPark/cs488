@@ -26,9 +26,17 @@ s5 = gr.nh_sphere('s5', {0, 100, -250}, 25)
 scene_root:add_child(s5)
 s5:set_material(mat1)
 
-testMesh = gr.nh_mesh( "myBox", "Assets/cube.obj", {-250, -300, -100}, 200)
+--[[
+testMesh = gr.cube( "myBox")
 scene_root:add_child(testMesh)
+testMesh:scale(200, 200, 200)
+testMesh:translate(-250, -300, -100)
 testMesh:set_material(mat1)
+]]
+
+testBox = gr.nh_box('box', {-250, -300, -100}, 200)
+scene_root:add_child(testBox)
+testBox:set_material(mat1)
 
 
 white_light = gr.light({-100.0, 150.0, 400.0}, {0.9, 0.9, 0.9}, {1, 0, 0})

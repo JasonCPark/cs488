@@ -28,4 +28,5 @@ public:
 	std::vector<Triangle> m_faces;
 
     friend std::ostream& operator<<(std::ostream& out, const Mesh& mesh);
+	void applyTrans(glm::mat4 trans);
 };
